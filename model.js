@@ -59,7 +59,7 @@ export function updateJob(state, user, id, changes, now = new Date()) {
   if (user.role !== 'manager' && keys.some(key => key !== 'status')) throw new Error('Only managers can assign or reschedule jobs.');
   const updated = { ...job, ...changes };
   if (!allowedStatuses(job).includes(updated.status)) throw new Error('That status is not available for this service location.');
-  if (updated.assignee !== null && !STAFF.some(person => person.id === updated.assignee && person.role === 'tech')) throw new Error('Choose a valid technician.');
+  if (updated.assignee !== null && !(state.staff || STAFF).some(person => person.id === updated.assignee && person.role === 'tech' && (!person.disabled || updated.assignee === job.assignee))) throw new Error('Choose a valid technician.');
   if (!Number.isFinite(new Date(updated.scheduled).getTime())) throw new Error('Choose a valid appointment time.');
   const scheduleChanged = updated.scheduled !== job.scheduled;
   const assignmentChanged = updated.assignee !== job.assignee;
@@ -68,7 +68,7 @@ export function updateJob(state, user, id, changes, now = new Date()) {
     if (conflict) throw new Error(`This technician already has job #${conflict.id} during that hour. Choose another time or technician.`);
   }
   const messages = [];
-  if (assignmentChanged) messages.push(updated.assignee ? `Assigned to ${userById(updated.assignee).name}` : 'Assignment removed');
+  if (assignmentChanged) messages.push(updated.assignee ? `Assigned to ${(state.staff || STAFF).find(person => person.id === updated.assignee).name}` : 'Assignment removed');
   if (scheduleChanged) messages.push(`Appointment changed to ${new Date(updated.scheduled).toLocaleString()}`);
   if (updated.status !== job.status) messages.push(`Status changed to ${updated.status}`);
   if (!messages.length) return state;
@@ -85,7 +85,7 @@ export function updateJob(state, user, id, changes, now = new Date()) {
 export function addNote(state, user, id, text, now = new Date()) {
   const job = state.jobs.find(item => item.id === id);
   if (!canAccess(user, job)) throw new Error('This job is not available to your account.');
-  const value = text.trim();
+  const value = typeof text === 'string' ? text.trim() : '';
   if (!value) throw new Error('Write a note before saving.');
   if (value.length > 2000) throw new Error('Notes must be 2,000 characters or fewer.');
   return { ...state, jobs: state.jobs.map(item => item.id === id ? { ...item, notes: [...item.notes, { author: user.id, text: value, at: now.toISOString() }] } : item) };

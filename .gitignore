@@ -4,3 +4,7 @@ node_modules/
 test-results/
 
 .private/
+
+.env
+.env.*
+!.env.example

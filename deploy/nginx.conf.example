@@ -1,0 +1,12 @@
+# Inside the existing HTTPS virtual host for your APP_ORIGIN hostname.
+# Configure the certificate on your existing web server as usual.
+location / {
+    proxy_pass http://127.0.0.1:5173;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout 30s;
+    client_max_body_size 32k;
+}

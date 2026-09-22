@@ -1,49 +1,94 @@
-# Pulse Tech · Field workspace
+# Pulse Tech field workspace
 
-A mobile-friendly staff app with preloaded sample bookings and browser-local persistence. The included local Node server handles owner sign-in. No customer-site integration is required.
+A blue-and-black staff workspace with individual sign-in, staff invitations, and shared server-side data.
 
-## Run
+## Run locally
 
-Requires Node.js 20 or later. No dependency installation is needed.
+Requires Node.js 24 or later.
 
 ```sh
+npm ci
 npm start
 ```
 
-Open **http://localhost:5173**. On first launch, create your owner account with your name, email, and a password of at least 12 characters. Later visits require sign-in. Use the profile avatar (or the account button on desktop) to sign out.
+Open **http://localhost:5173**. Create the owner account on first launch, then sign in with that email and password. If you already created an owner in the previous version, those credentials are imported automatically from `.private/account.json`.
+
+Without `DATABASE_URL`, the app uses SQLite at `.private/pulse.sqlite`. All browsers connecting to this server share jobs, notes, appointments, and notifications. Browser-local demo data is no longer used; earlier localStorage edits remain in the browser but are not imported automatically. New databases start with fictional sample customers and appointments.
+
+## Forgotten owner password
+
+On the computer running the app, open a terminal in this project and run:
+
+```sh
+node scripts/reset-password.mjs
+```
+
+The command identifies the owner account and prompts twice for a new password of at least 12 characters. Typing is hidden. It preserves jobs and staff accounts and invalidates existing owner sessions. The app can remain running. For another installation, use the same `DATA_DIR` or `DATABASE_URL` environment as that app. This is a local administrator recovery tool, not a public password-reset endpoint.
+
+## Team access
+
+Open **Team** as the owner or a manager:
+
+- Create a technician invitation, or choose an unclaimed staff profile to retain its sample assignments.
+- Only the owner can invite managers. Managers can invite technicians.
+- Copy the invitation link and share it privately. The recipient creates their own password.
+- Links expire after 48 hours, work once, and can be revoked. Replacing an invitation cancels the previous link.
+- Disable an account to end its sessions and block sign-in; enable it to restore access. The owner cannot be disabled.
+
+Invitation email delivery is not configured. Links are shown once after creation and stored only as hashes. Account passwords use salted scrypt hashes. Sessions use random tokens in HttpOnly, SameSite cookies, expire after eight hours, and persist across app restarts. HTTPS deployments use Secure cookies.
+
+## Shared workflows
+
+- Technicians receive only their assigned jobs, related customers, and their own alerts.
+- Managers see all jobs and can assign/reassign technicians or change appointments.
+- Job status updates, notes, assignments, rescheduling, and alert read status are saved through authenticated APIs.
+- Server-side authorization checks every data operation. Sending a different user ID or role from the browser cannot grant access.
+- Stale job edits are rejected with a conflict message; concurrent notes are both preserved.
+- Scheduling checks reserve one hour per active appointment and reject overlaps.
+- The workspace refreshes about every 10 seconds when idle, without replacing an open form or dialog. Reopen a detail dialog to refresh it.
+- Customer contacts/history, filters, notifications, and responsive layouts remain available.
+
+The initial customer records are fictional. Real customer/job creation, password recovery, and account editing are future work.
+
+## Proxmox / server deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the proposed topology, Docker Compose, reverse proxy configuration, TLS, database setup, backups, and migration from SQLite to PostgreSQL.
+
+Set `DATABASE_URL` to use the PostgreSQL driver. A separate web server can proxy HTTPS to the app over the private network. Your database engine, private addresses, domain, and LAN/VPN versus public access still need confirmation before deployment. No servers or cluster settings have been modified.
+
+## Tests
 
 ```sh
 npm test
 ```
 
-## Included
+If your environment blocks Node's test-worker subprocesses:
 
-- Technician dashboard, assigned jobs, search, and date/status filters.
-- Manager overview, technician filters, assignment/reassignment, and appointment editing.
-- One-hour appointments with overlap prevention for active jobs.
-- Requested, Confirmed, En Route (on-site only), In Progress, Done, Cancelled, and Rescheduled statuses.
-- Immediate status updates, staff notes, and a job activity log.
-- Customer contacts, devices, purchases, and previous service records.
-- In-app assignment and time-change alerts, scoped to each profile.
-- Responsive desktop/mobile views, keyboard-accessible dialogs, and local persistence.
+```sh
+node --test --test-isolation=none
+```
 
-## Demo behavior
+The tests cover authentication, invitation lifecycle, role restrictions, shared writes, concurrency, legacy credential migration, persistence, scheduling, and notifications. All use isolated temporary databases.
 
-Sample appointments are generated relative to the day the app is first opened. Job times use the browser’s local timezone. Changes remain in this browser across reloads and sign-ins. Open tabs receive updates through browser storage events. Clear the `pulse-tech-demo-v1` localStorage key to start with fresh sample jobs.
+A real-browser test is included and runs when `CHROME_PATH` points to an installed Chrome/Chromium executable. For PowerShell:
 
-Technicians see their own jobs and customer records associated with those jobs; managers see all records. Historical purchase and service summaries are available for those customers. Internal job notes are shown only within accessible jobs.
+```powershell
+$env:CHROME_PATH = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+node --test --test-isolation=none test/browser.test.js
+```
 
-Changing an appointment’s time marks it **Rescheduled**. Reassignment alerts both the previous and new technician; schedule changes alert the assigned technician. En Route is available only for on-site appointments. Overdue follows the specified rule exactly: scheduled time has passed and status is not Done, so cancelled appointments can also be overdue. The completed-today metric counts today’s appointments currently marked Done.
+Browser checks cover owner setup, invitation acceptance, escaping user-entered names, technician restrictions, shared notes across two browser sessions, sign-out, invalid passwords, and mobile overflow. Screenshots are written to the ignored `test-results` directory. PostgreSQL connectivity and Docker/proxy deployment need separate validation against the target infrastructure.
 
-Jobs and customer records are fictional and remain in browser-local storage. Owner credentials are verified by the Node server, with a salted scrypt password hash stored in `.private/account.json` (ignored by Git and never served). The server gates workspace scripts and sample records behind an HttpOnly, SameSite session cookie. Sessions expire after eight hours and are invalidated on sign-out or server restart. Owner setup is disabled once an account exists. Only the owner account is supported currently; staff invitations and password recovery are not yet implemented. This localhost preview still uses client-side job data and permissions; production use requires HTTPS, server-side job storage, and authorization on every data operation.
+## Main files
 
-The visual theme uses near-black backgrounds, deep blue panels, electric-blue actions, a subtle technical grid on the sign-in screen, and system sans-serif typography. Status badges retain their functional colors. No external fonts, assets, or services are required. The Node server binds to localhost and serves only the application’s public files.
+- `auth.js`: sign-in, owner setup, and invitation acceptance.
+- `app.js`: workspace views and API interactions.
+- `view-model.js`: presentation-only status helpers; contains no customer records.
+- `server.mjs`: HTTP endpoints, sessions, access checks, and rate limiting.
+- `workspace.mjs`: invitations, scoped snapshots, and shared updates.
+- `database.mjs`: SQLite/PostgreSQL schema and transaction adapters.
+- `model.js`: server-only sample data and workflow rules.
+- `styles.css`: theme and responsive layouts.
+- `scripts/migrate-to-postgres.mjs`: transactional copy into an empty PostgreSQL database.
 
-## Files
-
-- `auth.js`: owner setup and sign-in screen.
-- `app.js`: rendering, interactions, and browser persistence.
-- `model.js`: sample data, permissions, job updates, scheduling, and notes.
-- `styles.css`: visual design and responsive layouts.
-- `server.mjs`: dependency-free local web server.
-- `test/model.test.js`: permission, workflow, scheduling, notification, and note tests.
+Private credentials, databases, `.env` files, and test artifacts are excluded from Git and the Docker build.

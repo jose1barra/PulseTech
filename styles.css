@@ -132,3 +132,23 @@ dialog::backdrop { background: #020610bf; backdrop-filter: blur(5px); }
 .signin-submit { width: 100%; margin-top: 22px; min-height: 46px; justify-content: space-between; }
 .signin-submit:disabled { opacity: .65; }
 .auth-loading { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; color: #9baec7; }
+
+/* Shared team administration */
+.team-layout { display: grid; grid-template-columns: minmax(260px, .85fr) minmax(0, 1.5fr); gap: 22px; align-items: start; }
+.team-form { padding: 0 23px 23px; margin: 0; }
+.team-form select { width: 100%; min-height: 44px; }
+.team-form label:first-child { margin-top: 0; }
+.team-member { display: flex; align-items: center; gap: 13px; padding: 20px 23px; border-top: 1px solid var(--line); }
+.team-member > div { min-width: 0; flex: 1; }
+.team-member strong { font-size: 13px; overflow-wrap: anywhere; }
+.team-member p { font-size: 11px; color: #9baec7; margin: 6px 0; overflow-wrap: anywhere; }
+.team-member small { font-size: 10px; color: #83b6ed; }
+.team-member .button { font-size: 11px; }
+.invitations-panel { margin-top: 22px; }
+.team-empty { padding: 0 23px 23px; }
+.invite-result { margin: 0 23px 23px; padding: 16px; background: #122744; border: 1px solid #3877ba; border-radius: 7px; }
+.invite-result label { display: block; font-size: 12px; line-height: 1.6; }
+.invite-result input { display: block; width: 100%; margin: 12px 0; padding: 10px; background: #080f1c; border: 1px solid #2c405d; color: #d9e6f8; border-radius: 5px; font-size: 12px; }
+.signin-form input[readonly] { color: #9baec7; }
+@media(max-width:960px) { .team-layout { grid-template-columns: 1fr; } }
+@media(max-width:680px) { .team-member { padding: 16px; gap: 9px; } .team-member .button { padding: 8px; min-height: 34px; } .team-form { padding: 0 17px 19px; } .auth-loading { padding: 24px; text-align: center; } }
