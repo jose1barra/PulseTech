@@ -10,9 +10,9 @@ import { digest, RequestError, requireValue, cleanName, cleanEmail, passwordHash
 const root = fileURLToPath(new URL('.', import.meta.url));
 const derive = promisify(scrypt);
 const lifetime = 8 * 60 * 60 * 1000;
-const publicFiles = new Set(['/index.html', '/styles.css', '/auth.js', '/favicon.svg']);
+const publicFiles = new Set(['/index.html', '/styles.css', '/auth.js', '/favicon.svg', '/assets/brand/pulsetech-symbol.png']);
 const protectedFiles = new Set(['/app.js', '/view-model.js']);
-const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml' };
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png' };
 async function readBody(req) {
   requireValue(req.headers['content-type']?.startsWith('application/json'), 415, 'JSON required.');
   let text = '';
